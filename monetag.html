@@ -17,65 +17,99 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #000; /* Black background */
+            background-color: #000;
             font-family: 'Arial', sans-serif;
-            color: #fff; /* White text for contrast */
+            color: #fff;
         }
+
         .container {
             text-align: center;
-            background-color: #333; /* Dark background for the container */
+            background-color: #333;
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
             width: 90%;
             max-width: 500px;
         }
+
         h2 {
             font-size: 2rem;
             margin-bottom: 30px;
         }
+
         .btn {
             font-size: 1.2rem;
             padding: 12px 30px;
             margin: 10px;
             border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: color 0.4s, border-color 0.4s;
         }
-        .btn-primary {
-            background-color: rgb(0, 123, 255); /* RGB color */
-            border: none;
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, #ff0000, #00ff00, #0000ff);
+            z-index: -1;
+            filter: blur(8px);
+            transition: opacity 0.4s;
         }
-        .btn-primary:hover {
-            background-color: rgb(0, 86, 179); /* RGB hover color */
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, #ff0000, #00ff00, #0000ff);
+            z-index: -2;
+            transition: transform 0.5s;
+            transform: translate(-100%, 0);
         }
-        .btn-success {
-            background-color: rgb(40, 167, 69); /* RGB color */
-            border: none;
+
+        .btn-primary:hover::after,
+        .btn-success:hover::after,
+        .btn-warning:hover::after,
+        .btn-red:hover::after {
+            transform: translate(0, 0);
         }
-        .btn-success:hover {
-            background-color: rgb(34, 136, 56); /* RGB hover color */
-        }
-        .btn-warning {
-            background-color: rgb(255, 193, 7); /* RGB color */
-            border: none;
-        }
-        .btn-warning:hover {
-            background-color: rgb(224, 168, 0); /* RGB hover color */
-        }
-        .btn-red {
-            background-color: rgb(244, 67, 54); /* RGB color */
-            color: #ffffff;
-            border: none;
-        }
-        .btn-red:hover {
-            background-color: rgb(204, 54, 45); /* RGB hover color */
-        }
+
+        .btn-primary { border-color: rgb(0, 123, 255); }
+        .btn-success { border-color: rgb(40, 167, 69); }
+        .btn-warning { border-color: rgb(255, 193, 7); }
+        .btn-red { border-color: rgb(244, 67, 54); }
+
+        .btn:hover { color: #000; border-color: transparent; }
+
         .ip-info {
             margin-top: 20px;
             font-size: 1rem;
             color: #ccc;
         }
+
+        .toggle-container {
+            margin-top: 20px;
+        }
+
+        .toggle-btn {
+            background-color: #007bff;
+            color: white;
+            font-size: 1rem;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-btn.active { background-color: #28a745; }
     </style>
 </head>
 <body>
@@ -87,6 +121,10 @@
         <button id="showAdButton2" class="btn btn-success">Show Ad 2</button>
         <button id="showAdButton3" class="btn btn-warning">Show Ad 3</button>
         <button id="showAdButton4" class="btn btn-red">Show Ad 4</button>
+    </div>
+
+    <div class="toggle-container">
+        <button id="toggleAutoShow" class="toggle-btn">Enable Auto Show</button>
     </div>
 
     <div class="ip-info">
@@ -102,7 +140,7 @@
 
 <script>
     // Fetch IP and country info
-    fetch('https://ipinfo.io/json?token=your_api_token_here') // Replace with your IPinfo API token
+    fetch('https://ipinfo.io/json?token=bbe78dc9ab1b82') 
         .then(response => response.json())
         .then(data => {
             const ipInfo = document.getElementById('ipInfo');
@@ -113,35 +151,52 @@
             document.getElementById('ipInfo').innerText = 'Could not fetch IP information';
         });
 
-    // Auto-click next button logic
-    let clickedButton = localStorage.getItem('clickedButton') || 'showAdButton1';
-    document.getElementById(clickedButton).click(); // Simulate click on the stored button
+    let buttonSequence = ['showAdButton1', 'showAdButton2', 'showAdButton3', 'showAdButton4'];
+    let currentIndex = localStorage.getItem('currentIndex') || 0;
+    let autoShowEnabled = JSON.parse(localStorage.getItem('autoShowEnabled')) || false;
+    const toggleButton = document.getElementById('toggleAutoShow');
+
+    // Update toggle button state
+    function updateToggleButton() {
+        toggleButton.textContent = autoShowEnabled ? 'Disable Auto Show' : 'Enable Auto Show';
+        toggleButton.classList.toggle('active', autoShowEnabled);
+    }
 
     function showAd(buttonId) {
         show_8597379().then(() => {
             toastr.success(`You have watched the ad on ${buttonId} and earned a reward!`, 'Congratulations');
-            localStorage.setItem('clickedButton', `showAdButton${parseInt(buttonId.split('showAdButton')[1]) + 1}`); // Store next button to auto-click
+            currentIndex = (parseInt(currentIndex) + 1) % buttonSequence.length;
+            localStorage.setItem('currentIndex', currentIndex);
+
+            if (autoShowEnabled) {
+                setTimeout(() => {
+                    document.getElementById(buttonSequence[currentIndex]).click();
+                }, 5000);
+            }
         }).catch((error) => {
             toastr.error('There was an error displaying the ad.', 'Error');
             console.error(error);
         });
     }
 
-    document.getElementById('showAdButton1').addEventListener('click', function() {
-        showAd('Show Ad 1');
+    buttonSequence.forEach((buttonId) => {
+        document.getElementById(buttonId).addEventListener('click', function() {
+            showAd(buttonId);
+        });
     });
 
-    document.getElementById('showAdButton2').addEventListener('click', function() {
-        showAd('Show Ad 2');
+    // Toggle auto-show
+    toggleButton.addEventListener('click', () => {
+        autoShowEnabled = !autoShowEnabled;
+        localStorage.setItem('autoShowEnabled', autoShowEnabled);
+        updateToggleButton();
     });
 
-    document.getElementById('showAdButton3').addEventListener('click', function() {
-        showAd('Show Ad 3');
-    });
+    updateToggleButton();
 
-    document.getElementById('showAdButton4').addEventListener('click', function() {
-        showAd('Show Ad 4');
-    });
+    if (autoShowEnabled) {
+        document.getElementById(buttonSequence[currentIndex]).click();
+    }
 </script>
 
 </body>
